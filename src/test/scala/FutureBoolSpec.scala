@@ -149,4 +149,23 @@ class FutureBoolSpec extends FunSuite with ScalaFutures {
     }
     assert(result.getMessage == "Failed")
   }
+
+  //Combos
+
+  test("Combinations of all/any/not work as expected 0") {
+    val result = Await.result(FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(true)))), 5 seconds)
+    assert(!result)
+  }
+
+  test("Combinations of all/any/not work as expected 1") {
+    val result = Await.result(FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(false)))), 5 seconds)
+    assert(result)
+  }
+
+  test("Combinations of all/any/not work as expected 2") {
+    val result = intercept[RuntimeException] {
+      Await.result(FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(false), Future.failed(new RuntimeException)))), 5 seconds)
+    }
+    assert(result.getMessage == "Fail detected in all when all others were true")
+  }
 }
