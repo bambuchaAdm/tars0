@@ -6,6 +6,8 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 object FutureBool extends App {
+  def hasFailures[T](futuresBuffer: mutable.Seq[Future[T]]): Boolean = futuresBuffer.exists(_.value.fold(false) {xxx: Try[T] => xxx.isFailure})
+
   /** Asynchronously and non-blockingly returns a `Future` that will hold the optional result
     * of the first `Future` with a result that matches the predicate.
     *
@@ -14,9 +16,6 @@ object FutureBool extends App {
     * @param p       the predicate which indicates if it's a match
     * @return the `Future` holding the optional result of the search
     */
-
-  def hasFailures[T](futuresBuffer: mutable.Seq[Future[T]]): Boolean = futuresBuffer.exists(_.value.fold(false) {_.isFailure})
-
   def find[T](futuresBuffer: mutable.Seq[Future[T]])(p: T => Boolean)(implicit executor: ExecutionContext) = {
     if (futuresBuffer.isEmpty) successful[Option[T]](None)
     else {
@@ -45,13 +44,11 @@ object FutureBool extends App {
   }
 
   def any(futures: Future[Boolean]*)(implicit ec: ExecutionContext) = {
-    //find(futures) {identity} map {_.isDefined}
     val buffer = futures.toBuffer
-    val result: Future[Option[Boolean]] = find(buffer) {identity}
-    result flatMap {
-      case Some(f) => Future.successful(f)
-      case None => if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in any when all others were false")) else Future.successful(false)
-    }
+    find(buffer) {identity} flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in any when all others were false")) else Future.successful(false)) {_ => Future(true)}}
   }
 
+  def not(fb: Future[Boolean])(implicit ec: ExecutionContext): Future[Boolean] = {
+    fb map {b => !b}
+  }
 }

@@ -130,4 +130,23 @@ class FutureBoolSpec extends FunSuite with ScalaFutures {
     assert(result)
     assert(secs < 2)
   }
+
+  // Not
+
+  test ("not true is false") {
+    val result = Await.result(FutureBool.not(Future.successful(true)), 5 seconds)
+    assert(!result)
+  }
+
+  test ("not false is true") {
+    val result = Await.result(FutureBool.not(Future.successful(false)), 5 seconds)
+    assert(result)
+  }
+
+  test("not Future failed is Future failed") {
+    val result = intercept[RuntimeException] {
+      Await.result(FutureBool.not(Future.failed(new RuntimeException("Failed"))), 5 seconds)
+    }
+    assert(result.getMessage == "Failed")
+  }
 }
