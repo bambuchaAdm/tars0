@@ -102,13 +102,6 @@ class RulesEngineSpec extends FunSuite with ScalaFutures {
     def divisibleByFive(n: Int): Future[Boolean] = Future(n % 5 == 0)
   }
 
-  def fizzBuzzRules(fizzBuzz: FizzBuzz, n: Int) = Seq(
-    (() => all(fizzBuzz.divisibleByThree(n), fizzBuzz.divisibleByFive(n))) -> "fizzbuzz",
-    (() => fizzBuzz.divisibleByThree(n)) -> "fizz",
-    (() => fizzBuzz.divisibleByFive(n)) -> "buzz",
-    (() => Future(true)) -> n.toString()
-  )
-
   test("Rules can be constructed for fizzbuzz as a table") {
     val scenarios = Tables.Table[Int, String](
       ("param", "fizz or buzz or fizzbuzz or param"),
@@ -131,27 +124,59 @@ class RulesEngineSpec extends FunSuite with ScalaFutures {
     )
 
     val fizzBuzz = new FizzBuzz()
-
+    def rules(n: Int) = Seq(
+      (() => all(fizzBuzz.divisibleByThree(n), fizzBuzz.divisibleByFive(n))) -> "fizzbuzz",
+      (() => fizzBuzz.divisibleByThree(n)) -> "fizz",
+      (() => fizzBuzz.divisibleByFive(n)) -> "buzz",
+      (() => Future(true)) -> n.toString()
+    )
 
     TableDrivenPropertyChecks.forAll(scenarios) {(n, expected) =>
-      val result = Await.result(engine.assess(fizzBuzzRules(fizzBuzz, n)), 5 seconds).get
+      val result = Await.result(engine.assess(rules(n)), 5 seconds).get
       assert(expected == result)
     }
   }
 
   test("fizzbuzz rules assessed for 15 call divisibleByThree once and divisibleByFive once"){
     val fizzBuzz = spy(new FizzBuzz())
-    val result = Await.result(engine.assess(fizzBuzzRules(fizzBuzz, 15)), 5 seconds).get
+    def rules(n: Int) = Seq(
+      (() => all(fizzBuzz.divisibleByThree(n), fizzBuzz.divisibleByFive(n))) -> "fizzbuzz",
+      (() => fizzBuzz.divisibleByThree(n)) -> "fizz",
+      (() => fizzBuzz.divisibleByFive(n)) -> "buzz",
+      (() => Future(true)) -> n.toString()
+    )
+    val result = Await.result(engine.assess(rules(15)), 5 seconds).get
     assert(result == "fizzbuzz")
     verify(fizzBuzz).divisibleByThree(15)
     verify(fizzBuzz).divisibleByFive(15)
   }
 
   test("fizzbuzz rules assessed for 1 call divisibleByThree once and divisibleByFive once to test caching"){
-    val fizzBuzz = spy(new FizzBuzz())
-    val result = Await.result(engine.assess(fizzBuzzRules(fizzBuzz, 1)), 5 seconds).get
+    class MemoizedFizzBuzz() {
+
+      def divisibleByThree(n: Int): Future[Boolean] = Future(n % 3 == 0)
+
+      def divisibleByFive(n: Int): Future[Boolean] = Future(n % 5 == 0)
+
+      def mDivisibleByThree(n: Int) = divisibleByThree(n)
+
+      def mDivisibleByFive(n: Int) = divisibleByFive(n)
+    }
+
+    val fizzBuzz = spy(new MemoizedFizzBuzz())
+
+    def rules(n: Int) = Seq(
+      (() => all(fizzBuzz.divisibleByThree(n), fizzBuzz.divisibleByFive(n))) -> "fizzbuzz",
+      (() => fizzBuzz.mDivisibleByThree(n)) -> "fizz",
+      (() => fizzBuzz.mDivisibleByFive(n)) -> "buzz",
+      (() => Future(true)) -> n.toString()
+    )
+
+    val result = Await.result(engine.assess(rules(1)), 5 seconds).get
     assert(result == "1")
     verify(fizzBuzz).divisibleByThree(1)
     verify(fizzBuzz).divisibleByFive(1)
   }
+
+
 }
