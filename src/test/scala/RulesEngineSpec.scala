@@ -7,6 +7,9 @@ import scala.language.postfixOps
 import org.scalatest.prop.{TableDrivenPropertyChecks, Tables}
 import org.mockito.Mockito.{spy, verify, when}
 import FutureBool._
+import com.softwaremill.macmemo.memoize
+import scala.reflect.macros.Context
+import scala.language.experimental.macros
 
 class RulesEngineSpec extends FunSuite with ScalaFutures {
   val engine = new RulesEngine
@@ -158,15 +161,17 @@ class RulesEngineSpec extends FunSuite with ScalaFutures {
 
       def divisibleByFive(n: Int): Future[Boolean] = Future(n % 5 == 0)
 
-      def mDivisibleByThree(n: Int) = divisibleByThree(n)
+      @memoize(2000, 2 hours)
+      def mDivisibleByThree(n: Int): Future[Boolean] = divisibleByThree(n)
 
-      def mDivisibleByFive(n: Int) = divisibleByFive(n)
+      @memoize(maxSize = 2000, expiresAfter = 2 hours)
+      def mDivisibleByFive(n: Int): Future[Boolean] = divisibleByFive(n)
     }
 
     val fizzBuzz = spy(new MemoizedFizzBuzz())
 
     def rules(n: Int) = Seq(
-      (() => all(fizzBuzz.divisibleByThree(n), fizzBuzz.divisibleByFive(n))) -> "fizzbuzz",
+      (() => all(fizzBuzz.mDivisibleByThree(n), fizzBuzz.mDivisibleByFive(n))) -> "fizzbuzz",
       (() => fizzBuzz.mDivisibleByThree(n)) -> "fizz",
       (() => fizzBuzz.mDivisibleByFive(n)) -> "buzz",
       (() => Future(true)) -> n.toString()
@@ -178,5 +183,31 @@ class RulesEngineSpec extends FunSuite with ScalaFutures {
     verify(fizzBuzz).divisibleByFive(1)
   }
 
+  test("caching works with multiple params"){
+    class MemoizedFizzBuzz() {
+
+      def divisibleBy(n: Int, d: Int): Future[Boolean] = {Thread.sleep(5 * 1000); Future(n % d == 0)}
+
+      @memoize(2000, 100 second)
+      def mDivisibleByThree(n: Int): Future[Boolean] = divisibleBy(n, 3)
+
+      @memoize(maxSize = 2000, expiresAfter = 100 second)
+      def mDivisibleByFive(n: Int): Future[Boolean] = divisibleBy(n, 5)
+    }
+
+    val fizzBuzz = spy(new MemoizedFizzBuzz())
+
+    def rules(n: Int) = Seq(
+      (() => all(fizzBuzz.mDivisibleByThree(n), fizzBuzz.mDivisibleByFive(n))) -> "fizzbuzz",
+      (() => fizzBuzz.mDivisibleByThree(n)) -> "fizz",
+      (() => fizzBuzz.mDivisibleByFive(n)) -> "buzz",
+      (() => Future(true)) -> n.toString()
+    )
+
+    val result = Await.result(engine.assess(rules(1)), 30 seconds).get
+    assert(result == "1")
+    verify(fizzBuzz).divisibleBy(1, 3)
+    verify(fizzBuzz).divisibleBy(1, 5)
+  }
 
 }
