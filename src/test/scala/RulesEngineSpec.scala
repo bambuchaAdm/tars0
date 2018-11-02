@@ -146,4 +146,12 @@ class RulesEngineSpec extends FunSuite with ScalaFutures {
     verify(fizzBuzz).divisibleByThree(15)
     verify(fizzBuzz).divisibleByFive(15)
   }
+
+  test("fizzbuzz rules assessed for 1 call divisibleByThree once and divisibleByFive once to test caching"){
+    val fizzBuzz = spy(new FizzBuzz())
+    val result = Await.result(engine.assess(fizzBuzzRules(fizzBuzz, 1)), 5 seconds).get
+    assert(result == "1")
+    verify(fizzBuzz).divisibleByThree(1)
+    verify(fizzBuzz).divisibleByFive(1)
+  }
 }
