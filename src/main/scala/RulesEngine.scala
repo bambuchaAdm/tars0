@@ -1,10 +1,24 @@
 import org.slf4j.Logger
+import scala.language.implicitConversions
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
 case class Predicate[A](function: A => Future[Boolean], name: String)
+
+object Predicate {
+  def apply[A](fun: A => Future[Boolean], name: String): Predicate[A] = new Predicate(fun, name)
+
+  implicit def apply[A](source: (String, A => Future[Boolean])): Predicate[A] = new Predicate[A](source._2, source._1)
+}
+
+case class PredicateChain[A, R](seq: Seq[(Predicate[A], R)])
+
+object PredicateChain {
+  def of[A, R](first: (Predicate[A], R), rest: (Predicate[A], R)*) = new PredicateChain[A, R](rest.+:(first))
+}
+
 
 class RulesEngine(log: Logger) {
 

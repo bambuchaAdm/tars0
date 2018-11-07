@@ -10,7 +10,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class CacheSpec  extends FunSuite with ScalaFutures {
+class CacheSpec extends FunSuite with ScalaFutures {
   val fakeLogger = Mockito.spy(classOf[Logger])
   val engine = new RulesEngine(fakeLogger)
 
@@ -157,22 +157,16 @@ class CacheSpec  extends FunSuite with ScalaFutures {
     }
   }
 
+
+
   test("fizzbuzz rules are logged with the rule name and value") {
     val fizzBuzz = spy(new FizzBuzz())
 
-    val fizzPredicate = Predicate[Int](fizzBuzz.divisibleByThree, "fizz-predicate")
-
-    val fizzBuzzPredicate = Predicate[Int](n => all(fizzBuzz.divisibleByThree(n), fizzBuzz.divisibleByFive(n)), "fizzbuzz-predicate")
-
-    val buzzPredicate = Predicate[Int](fizzBuzz.divisibleByFive, "buzz-predicate")
-
-    val `else` = Predicate[Int](_ => Future.successful(true), "finish")
-
-    val rules = Seq(
-      fizzBuzzPredicate -> "fizzbuzz",
-      fizzPredicate -> "fizz",
-      buzzPredicate -> "buzz",
-      `else` -> "number"
+    val rules = PredicateChain.of[Int, String](
+      ("fizz-predicate" -> fizzBuzz.divisibleByThree(_)) -> "fizzbuzz",
+      ("fizzbuzz-predicate" -> (n => all(fizzBuzz.divisibleByThree(n), fizzBuzz.divisibleByFive(n)))) -> "fizz",
+      ("buzz-predicate" -> fizzBuzz.divisibleByFive(_))-> "buzz",
+      ("finish" -> (_ => Future.successful(true))) -> "number"
     )
     val result = Await.result(engine.loggingAssess(rules)(15), 5 seconds).get
     assert(result == "fizzbuzz")
