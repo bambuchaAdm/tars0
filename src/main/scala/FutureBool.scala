@@ -6,7 +6,8 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 object FutureBool extends App {
-  def hasFailures[T](futuresBuffer: mutable.Seq[Future[T]]): Boolean = futuresBuffer.exists(_.value.fold(false) {xxx: Try[T] => xxx.isFailure})
+  def hasFailures[T](futuresBuffer: Traversable[Future[T]]): Boolean =
+    futuresBuffer.exists(_.value.fold(false) {xxx: Try[T] => xxx.isFailure})
 
   /** Asynchronously and non-blockingly returns a `Future` that will hold the optional result
     * of the first `Future` with a result that matches the predicate.
@@ -16,7 +17,7 @@ object FutureBool extends App {
     * @param p       the predicate which indicates if it's a match
     * @return the `Future` holding the optional result of the search
     */
-  def find[T](futuresBuffer: mutable.Seq[Future[T]])(p: T => Boolean)(implicit executor: ExecutionContext) = {
+  def find[T](futuresBuffer: Traversable[Future[T]])(p: T => Boolean)(implicit executor: ExecutionContext) = {
     if (futuresBuffer.isEmpty) successful[Option[T]](None)
     else {
       val result = Promise[Option[T]]()
@@ -38,17 +39,19 @@ object FutureBool extends App {
     }
   }
 
-  def all(futures: Future[Boolean]*)(implicit ec: ExecutionContext) = {
-    val buffer = futures.toBuffer
-    find(buffer) {!_} flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in all when all others were true")) else Future(true)) {_ => Future(false)}}
+  def all[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): A => Future[Boolean] = {
+    value => {
+      val buffer = futures.map(predicate => predicate.function(value))
+      find(buffer) { result => !result } flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in all when all others were true")) else Future(true)) {_ => Future(false)}}
+    }
   }
 
-  def any(futures: Future[Boolean]*)(implicit ec: ExecutionContext) = {
-    val buffer = futures.toBuffer
+  def any[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): A => Future[Boolean] = value => {
+    val buffer = futures.map(predicate => predicate.function(value))
     find(buffer) {identity} flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in any when all others were false")) else Future.successful(false)) {_ => Future(true)}}
   }
 
-  def not(fb: Future[Boolean])(implicit ec: ExecutionContext): Future[Boolean] = {
-    fb map {b => !b}
+  def not[A](fb: Predicate[A])(implicit ec: ExecutionContext): Predicate[A] = {
+    fb.inverse
   }
 }

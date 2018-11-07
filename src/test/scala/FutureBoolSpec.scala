@@ -48,48 +48,62 @@ class FutureBoolSpec extends FunSuite with ScalaFutures {
   //All
 
   test("all returns Future.successful(true) when all arguments are Future.successful(true)") {
-    val result = Await.result(FutureBool.all(Future.successful(true), Future.successful(true)), 5 seconds)
+    val allFunction = FutureBool.all(Future.successful(true), Future.successful(true))
+    val result = Await.result(allFunction(null), 5 seconds)
     assert(result)
   }
 
   test("all returns Future.successful(false) when some arguments are Future.successful(false)") {
-    val result = Await.result(FutureBool.all(Future.successful(true), Future.successful(true), Future.successful(false)), 5 seconds)
+    val allFunction = FutureBool.all(Future.successful(true), Future.successful(true), Future.successful(false))
+    val result = Await.result(allFunction(null), 5 seconds)
     assert(!result)
   }
 
   test("all returns Future.successful(false) when all arguments are Future.successful(false)") {
-    val result = Await.result(FutureBool.all(Future.successful(false), Future.successful(true), Future.successful(false)), 5 seconds)
+    val allFunction = FutureBool.all(Future.successful(false), Future.successful(true), Future.successful(false))
+    val result = Await.result(allFunction(null), 5 seconds)
     assert(!result)
   }
 
   test("Failed futures are cause a fail when calculating a true result using all") {
     val result = intercept[RuntimeException]{
-      Await.result(FutureBool.all(Future.failed(new RuntimeException("Failed")), Future.successful(true), Future.successful(true)), 5 seconds)
+      val allFunction = FutureBool.all(Future.failed(new RuntimeException("Failed")), Future.successful(true), Future.successful(true))
+      Await.result(allFunction(null), 5 seconds)
     }
     assert(result.getMessage == "Fail detected in all when all others were true")
   }
 
   test("Failed futures are ignored when calculating a false result using all") {
-    val result = Await.result(FutureBool.all(Future.failed(new RuntimeException("Failed")), Future.successful(false), Future.successful(true)), 5 seconds)
+    val allFunction = FutureBool.all(Future.failed(new RuntimeException("Failed")), Future.successful(false), Future.successful(true))
+    val result = Await.result(allFunction(null), 5 seconds)
     assert(!result)
   }
 
   test ("all returns false fast if there are trues and falses, but trues are delayed") {
-    val (result, secs) = time(Await.result(FutureBool.all(Future {Thread.sleep(2000); true}, Future.successful(false)), 5 seconds))
+    val allFunction = FutureBool.all(Future {
+      Thread.sleep(2000); true
+    }, Future.successful(false))
+    val (result, secs) = time(Await.result(allFunction(null), 5 seconds))
     println("Time was " + secs)
     assert(!result)
     assert(secs < 2)
   }
 
   test ("all returns true at the rate of the slowest true if they are all trues.") {
-    val (result, secs) = time(Await.result(FutureBool.all(Future {Thread.sleep(2000); true}, Future.successful(true)), 5 seconds))
+    val allFunction = FutureBool.all(Future {
+      Thread.sleep(2000); true
+    }, Future.successful(true))
+    val (result, secs) = time(Await.result(allFunction(null), 5 seconds))
     println("Time was " + secs)
     assert(result)
     assert(secs > 2)
   }
 
   test ("all returns true at the rate of the slowest true/fail if they are all trues/fails.") {
-    val (result, secs) = time(Await.result(FutureBool.all(Future {Thread.sleep(4000); true}, Future.successful(true)), 5 seconds))
+    val allFunction = FutureBool.all(Future {
+      Thread.sleep(4000); true
+    }, Future.successful(true))
+    val (result, secs) = time(Await.result(allFunction(null), 5 seconds))
     println("Time was " + secs)
     assert(result)
     assert(secs > 3)
@@ -98,34 +112,42 @@ class FutureBoolSpec extends FunSuite with ScalaFutures {
   // Any
 
   test("any returns Future.successful(true) when all arguments are Future.successful(true)") {
-    val result = Await.result(FutureBool.any(Future.successful(true), Future.successful(true), Future.successful(true)), 5 seconds)
+    val anyFunction = FutureBool.any(Future.successful(true), Future.successful(true), Future.successful(true))
+    val result = Await.result(anyFunction(null), 5 seconds)
     assert(result)
   }
 
   test("any returns Future.successful(true) when some arguments are Future.successful(false)") {
-    val result = Await.result(FutureBool.any(Future.successful(true), Future.successful(false), Future.successful(false)), 5 seconds)
+    val anyFunction = FutureBool.any(Future.successful(true), Future.successful(false), Future.successful(false))
+    val result = Await.result(anyFunction(null), 5 seconds)
     assert(result)
   }
 
   test("any returns Future.successful(true) when all arguments are Future.successful(false)") {
-    val result = Await.result(FutureBool.any(Future.successful(false), Future.successful(false), Future.successful(false)), 5 seconds)
+    val anyFunction = FutureBool.any(Future.successful(false), Future.successful(false), Future.successful(false))
+    val result = Await.result(anyFunction(null), 5 seconds)
     assert(!result)
   }
 
   test("Failed futures are ignored when calculating a true result using any") {
-    val result = Await.result(FutureBool.any(Future.failed(new RuntimeException("Failed")), Future.successful(true), Future.successful(false)), 5 seconds)
+    val anyFunction = FutureBool.any(Future.failed(new RuntimeException("Failed")), Future.successful(true), Future.successful(false))
+    val result = Await.result(anyFunction(null), 5 seconds)
     assert(result)
   }
 
   test("Failed futures are cause a fail when calculating a false result using any") {
     val result = intercept[RuntimeException]{
-      Await.result(FutureBool.any(Future.failed(new RuntimeException("Failed")), Future.successful(false), Future.successful(false)), 5 seconds)
+      val anyFunction = FutureBool.any(Future.failed(new RuntimeException("Failed")), Future.successful(false), Future.successful(false))
+      Await.result(anyFunction(null), 5 seconds)
     }
     assert(result.getMessage == "Fail detected in any when all others were false")
   }
 
   test ("any returns true fast if there are trues and falses, but falses are delayed") {
-    val (result, secs) = time(Await.result(FutureBool.any(Future {Thread.sleep(2000); false}, Future.successful(true)), 5 seconds))
+    val anyFunction = FutureBool.any(Future {
+      Thread.sleep(2000); false
+    }, Future.successful(true))
+    val (result, secs) = time(Await.result(anyFunction(null), 5 seconds))
     println("Time was " + secs)
     assert(result)
     assert(secs < 2)
@@ -134,18 +156,21 @@ class FutureBoolSpec extends FunSuite with ScalaFutures {
   // Not
 
   test ("not true is false") {
-    val result = Await.result(FutureBool.not(Future.successful(true)), 5 seconds)
+    val notFunction = FutureBool.not(Future.successful(true))
+    val result = Await.result(notFunction(null), 5 seconds)
     assert(!result)
   }
 
   test ("not false is true") {
-    val result = Await.result(FutureBool.not(Future.successful(false)), 5 seconds)
+    val notFunction = FutureBool.not(Future.successful(false))
+    val result = Await.result(notFunction(null), 5 seconds)
     assert(result)
   }
 
   test("not Future failed is Future failed") {
     val result = intercept[RuntimeException] {
-      Await.result(FutureBool.not(Future.failed(new RuntimeException("Failed"))), 5 seconds)
+      val notFunction = FutureBool.not(Future.failed(new RuntimeException("Failed")))
+      Await.result(notFunction(null), 5 seconds)
     }
     assert(result.getMessage == "Failed")
   }
@@ -153,24 +178,28 @@ class FutureBoolSpec extends FunSuite with ScalaFutures {
   //Combos
 
   test("Combinations of all/any/not work as expected 0") {
-    val result = Await.result(FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(true)))), 5 seconds)
+    val function = FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(true))))
+    val result = Await.result(function(null), 5 seconds)
     assert(!result)
   }
 
   test("Combinations of all/any/not work as expected 1") {
-    val result = Await.result(FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(false)))), 5 seconds)
+    val function = FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(false))))
+    val result = Await.result(function(null), 5 seconds)
     assert(result)
   }
 
   test("Combinations of all/any/not work as expected 2") {
     val result = intercept[RuntimeException] {
-      Await.result(FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(false), Future.failed(new RuntimeException)))), 5 seconds)
+      val function = FutureBool.not(FutureBool.all(Future(true), Future(true), FutureBool.any(Future(false), Future(false), Future.failed(new RuntimeException))))
+      Await.result(function(null), 5 seconds)
     }
     assert(result.getMessage == "Fail detected in all when all others were true")
   }
 
   test("Combinations of all/any/not work as expected 3") {
-    val result = Await.result(FutureBool.all(Future(true), Future(false), FutureBool.any(Future.failed(new RuntimeException), Future(false))), 5 seconds)
+    val function = FutureBool.all(Future(true), Future(false), FutureBool.any(Future.failed(new RuntimeException), Future(false)))
+    val result = Await.result(function(null), 5 seconds)
     assert(!result)
   }
 }
