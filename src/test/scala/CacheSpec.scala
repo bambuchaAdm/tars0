@@ -45,7 +45,7 @@ class CacheSpec extends FunSuite with ScalaFutures {
     )
 
     TableDrivenPropertyChecks.forAll(scenarios) { (n, expected) =>
-      val result = Await.result(engine.assess(rules(n)), 5 seconds).get
+      val result = Await.result(engine.assess(rules(n)), 5.seconds).get
       assert(expected == result)
     }
   }
@@ -60,7 +60,7 @@ class CacheSpec extends FunSuite with ScalaFutures {
       (() => Future(true)) -> n.toString()
     )
 
-    val result = Await.result(engine.assess(rules(15)), 5 seconds).get
+    val result = Await.result(engine.assess(rules(15)), 5.seconds).get
     assert(result == "fizzbuzz")
     verify(fizzBuzz).divisibleByThree(15)
     verify(fizzBuzz).divisibleByFive(15)
@@ -76,7 +76,7 @@ class CacheSpec extends FunSuite with ScalaFutures {
       (() => Future(true)) -> n.toString()
     )
 
-    val result = Await.result(engine.assess(rules(1)), 5 seconds).get
+    val result = Await.result(engine.assess(rules(1)), 5.seconds).get
     assert(result == "1")
     verify(fizzBuzz).divisibleByThree(1)
     verify(fizzBuzz).divisibleByFive(1)
@@ -92,7 +92,7 @@ class CacheSpec extends FunSuite with ScalaFutures {
       (() => Future(true)) -> n.toString()
     )
 
-    val result = Await.result(engine.assess(rules(1)), 30 seconds).get
+    val result = Await.result(engine.assess(rules(1)), 30.seconds).get
     assert(result == "1")
     verify(fizzBuzz).divisibleBy(1, 3)
     verify(fizzBuzz).divisibleBy(1, 5)
@@ -116,11 +116,11 @@ class CacheSpec extends FunSuite with ScalaFutures {
       (result, (end - start) / 1e9)
     }
 
-    val (result, secs) = time(Await.result(engine.assess(rules(1)), 30 seconds).get)
+    val (result, secs) = time(Await.result(engine.assess(rules(1)), 30.seconds).get)
     assert(result == "1")
     assert(secs > 1)
 
-    val (result2, secs2) = time(Await.result(engine.assess(rules(1)), 30 seconds).get)
+    val (result2, secs2) = time(Await.result(engine.assess(rules(1)), 30.seconds).get)
     assert(result2 == "1")
     assert(secs2 < 1)
   }
@@ -143,15 +143,15 @@ class CacheSpec extends FunSuite with ScalaFutures {
         (result, (end - start) / 1e9)
       }
 
-      val (result, secs) = time(Await.result(engine.assess(rules(1)), 30 seconds).get)
+      val (result, secs) = time(Await.result(engine.assess(rules(1)), 30.seconds).get)
       assert(result == "1")
       assert(secs > 1)
 
-      val (result2, secs2) = time(Await.result(engine.assess(rules(2)), 30 seconds).get)
+      val (result2, secs2) = time(Await.result(engine.assess(rules(2)), 30.seconds).get)
       assert(result2 == "2")
       assert(secs2 > 1)
 
-      val (result3, secs3) = time(Await.result(engine.assess(rules(1)), 30 seconds).get)
+      val (result3, secs3) = time(Await.result(engine.assess(rules(1)), 30.seconds).get)
       assert(result3 == "1")
       assert(secs3 < 1)
     }
@@ -168,7 +168,7 @@ class CacheSpec extends FunSuite with ScalaFutures {
       ("buzz-predicate" -> fizzBuzz.divisibleByFive(_))-> "buzz",
       ("finish" -> (_ => Future.successful(true))) -> "number"
     )
-    val result = Await.result(engine.loggingAssess(rules)(15), 5 seconds).get
+    val result = Await.result(engine.loggingAssess(rules)(15), 5.seconds).get
     assert(result == "fizzbuzz")
     verify(fizzBuzz).divisibleByThree(15)
     verify(fizzBuzz).divisibleByFive(15)
