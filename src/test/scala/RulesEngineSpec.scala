@@ -1,12 +1,17 @@
+import org.mockito.Mockito
 import org.scalatest.FunSuite
 import org.scalatest.concurrent.ScalaFutures
+import org.slf4j.Logger
+
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class RulesEngineSpec extends FunSuite with ScalaFutures {
-  val engine = new RulesEngine
+  val fakeLogger = Mockito.spy(classOf[Logger])
+  val engine = new RulesEngine(fakeLogger)
+
 
   test("An empty sequence of rules returns a None as a consequence when asseses") {
     val result = Await.result(engine.assess(Seq()), 5 seconds)
