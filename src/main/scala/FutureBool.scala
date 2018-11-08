@@ -39,19 +39,19 @@ object FutureBool extends App {
     }
   }
 
-  def all[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): A => Future[Boolean] = {
+  def all[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): Predicate[A] = Predicate(
     value => {
       val buffer = futures.map(predicate => predicate.function(value))
       find(buffer) { result => !result } flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in all when all others were true")) else Future(true)) {_ => Future(false)}}
     }
-  }
+  )
 
-  def any[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): A => Future[Boolean] = value => {
+  def any[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): Predicate[A] = Predicate(value => {
     val buffer = futures.map(predicate => predicate.function(value))
     find(buffer) {identity} flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in any when all others were false")) else Future.successful(false)) {_ => Future(true)}}
-  }
+  })
 
   def not[A](fb: Predicate[A])(implicit ec: ExecutionContext): Predicate[A] = {
-    fb.inverse
+    Predicate(fb.function.andThen(_.map(!_)))
   }
 }

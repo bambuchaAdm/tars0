@@ -5,9 +5,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class FizzBuzz {
-  def divisibleByThree(n: Int): Future[Boolean] = Future(n % 3 == 0)
+  def divisibleByThree(n: Int): Future[Boolean] = {
+    Future(n % 3 == 0)
+  }
 
-  def divisibleByFive(n: Int): Future[Boolean] = Future(n % 5 == 0)
+  def divisibleByFive(n: Int): Future[Boolean] = {
+    Future(n % 5 == 0)
+  }
 
   @memoize(2000, 2 hours)
   def mDivisibleByThree(n: Int): Future[Boolean] = divisibleByThree(n)
@@ -16,7 +20,8 @@ class FizzBuzz {
   def mDivisibleByFive(n: Int): Future[Boolean] = divisibleByFive(n)
 
   def divisibleBy(n: Int, d: Int): Future[Boolean] = {
-    Thread.sleep(1000); Future(n % d == 0)
+    Thread.sleep(5000)
+    Future(n % d == 0)
   }
 
   @memoize(2000, 100 second)
