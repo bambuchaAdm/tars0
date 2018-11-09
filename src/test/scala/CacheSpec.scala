@@ -189,18 +189,20 @@ class CacheSpec extends FunSuite with ScalaFutures {
     val fakeLogger = Mockito.spy(classOf[Logger])
     val engine = new RulesEngine(fakeLogger)
     val fizzBuzz = spy(new FizzBuzz())
-    val prime = new Prime()
+    val primeService = new Prime()
     val world = new FizzBazzEnvirionment with PrimeEnvironment {
       override val fizzbazz: FizzBuzz = fizzBuzz
 
-      override val prime: Prime = prime
+      override val prime: Prime = primeService
     }
     val rules = PredicateChain.of[Int, String, FizzBazzEnvirionment with PrimeEnvironment](
       all(FizzRule, BazzRule).named("fizzbuzz-rule") -> "fizzbuzz",
       FizzRule.named("fizz") -> "fizz",
       BazzRule.named("bazz") -> "buzz",
-      PrimeRule.named("prime") -> "prime"
+      PrimeRule.named("prime") -> "prime",
       finish[Int, FizzBazzEnvirionment with PrimeEnvironment]  -> Result(n => n.toString())
     )
+    val result = Await.result(engine.envirionmentalAssess(rules)(world)(7), 5.seconds).get
+    assert(result == "prime")
   }
 }

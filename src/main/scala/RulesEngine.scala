@@ -54,7 +54,7 @@ case class PredicateChain[A, R, E](seq: Seq[ChainEntry[A, R, E]])
 object PredicateChain {
 //  def of[A, R](first: ChainEntry[A, R], rest: ChainEntry[A, R]*) = new PredicateChain[A, R](rest.+:(first))
   def of[A, R, E](first: (Predicate[A, _ >: E] with Name, Result[A, R]), rest: (Predicate[A, _ >: E] with Name, Result[A, R])*) = {
-    val firstLifeted = ChainEntry.lift(first)
+    val firstLifeted = ChainEntry.lift[A, R, E](first)
     val restLifted = rest.map(ChainEntry.lift[A, R, E])
     new PredicateChain[A, R, E](restLifted.+:(firstLifeted))
   }
