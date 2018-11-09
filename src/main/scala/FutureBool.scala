@@ -39,19 +39,20 @@ object FutureBool extends App {
     }
   }
 
-  def all[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): Predicate[A] = Predicate(
-    value => {
-      val buffer = futures.map(predicate => predicate.function(value))
+  def all[A, E](futures: Predicate[A, E]*)(implicit ec: ExecutionContext): Predicate[A, E] = Predicate(
+    (value: A, environment: E) => {
+      val buffer = futures.map(predicate => predicate.function(environment)(value))
       find(buffer) { result => !result } flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in all when all others were true")) else Future(true)) {_ => Future(false)}}
     }
   )
 
-  def any[A](futures: Predicate[A]*)(implicit ec: ExecutionContext): Predicate[A] = Predicate(value => {
-    val buffer = futures.map(predicate => predicate.function(value))
+  def any[A, E](futures: Predicate[A, E]*)(implicit ec: ExecutionContext): Predicate[A, E] = Predicate(
+    (value: A, environment: E) => {
+    val buffer = futures.map(predicate => predicate.function(environment)(value))
     find(buffer) {identity} flatMap {_.fold(if (hasFailures(buffer)) Future.failed(new RuntimeException("Fail detected in any when all others were false")) else Future.successful(false)) {_ => Future(true)}}
   })
 
-  def not[A](fb: Predicate[A])(implicit ec: ExecutionContext): Predicate[A] = {
-    Predicate(fb.function.andThen(_.map(!_)))
+  def not[A, E](fb: Predicate[A, E])(implicit ec: ExecutionContext): Predicate[A, E] = {
+    Predicate((subject: A, environment: E) => fb.function(environment)(subject).map(!_))
   }
 }

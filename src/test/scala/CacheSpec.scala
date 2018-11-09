@@ -39,15 +39,15 @@ class CacheSpec extends FunSuite with ScalaFutures {
 
     val fizzBuzz = new FizzBuzz()
 
-    val rules = PredicateChain.of[Int, String](
+    val rules = PredicateChain.of[Int, String, Any](
       all((fizzBuzz.divisibleByThree _), (fizzBuzz.divisibleByFive _)).named("fizzbuzz-rule") -> "fizzbuzz",
       (fizzBuzz.divisibleByThree _).named("fizz") -> "fizz",
       (fizzBuzz.divisibleByFive _).named("bazz") -> "buzz",
-      finish[Int] -> Result(n => n.toString())
+      finish[Int, Any] -> Result(n => n.toString())
     )
 
     TableDrivenPropertyChecks.forAll(scenarios) { (n, expected) =>
-      val result = Await.result(engine.loggingAssess(rules)(n), 1.seconds).get
+      val result = Await.result(engine.loggingAssess(rules)(null)(n), 1.seconds).get
       assert(expected == result)
     }
   }
@@ -55,14 +55,14 @@ class CacheSpec extends FunSuite with ScalaFutures {
   test("fizzbuzz rules assessed for 15 call divisibleByThree once and divisibleByFive once") {
     val fizzBuzz = spy(new FizzBuzz())
 
-    val rules = PredicateChain.of[Int, String](
+    val rules = PredicateChain.of[Int, String, Any](
       all((fizzBuzz.divisibleByThree _), (fizzBuzz.divisibleByFive _)).named("fizzbuzz-rule") -> "fizzbuzz",
       (fizzBuzz.divisibleByThree _).named("fizz") -> "fizz",
       (fizzBuzz.divisibleByFive _).named("bazz") -> "buzz",
-      finish[Int] -> Result(n => n.toString())
+      finish[Int, Any]  -> Result(n => n.toString())
     )
 
-    val result = Await.result(engine.loggingAssess(rules)(15), 5.seconds).get
+    val result = Await.result(engine.loggingAssess(rules)(null)(15), 5.seconds).get
     assert(result == "fizzbuzz")
     verify(fizzBuzz).divisibleByThree(15)
     verify(fizzBuzz).divisibleByFive(15)
@@ -71,14 +71,14 @@ class CacheSpec extends FunSuite with ScalaFutures {
   test("fizzbuzz rules assessed for 1 call divisibleByThree once and divisibleByFive once to test caching") {
     val fizzBuzz = spy(new FizzBuzz())
 
-    val rules = PredicateChain.of[Int, String](
+    val rules = PredicateChain.of[Int, String, Any](
       all((fizzBuzz.mDivisibleByThree _), (fizzBuzz.mDivisibleByFive _)).named("fizzbuzz-rule") -> "fizzbuzz",
       (fizzBuzz.mDivisibleByThree _).named("fizz") -> "fizz",
       (fizzBuzz.mDivisibleByFive _).named("bazz") -> "buzz",
-      finish[Int] -> Result(n => n.toString())
+      finish[Int, Any]  -> Result(n => n.toString())
     )
 
-    val result = Await.result(engine.loggingAssess(rules)(1), 5.seconds).get
+    val result = Await.result(engine.loggingAssess(rules)(null)(1), 5.seconds).get
     assert(result == "1")
     verify(fizzBuzz).divisibleByThree(1)
     verify(fizzBuzz).divisibleByFive(1)
@@ -87,14 +87,14 @@ class CacheSpec extends FunSuite with ScalaFutures {
   test("caching works with multiple params") {
     val fizzBuzz = spy(new FizzBuzz())
 
-    val rules = PredicateChain.of[Int, String](
+    val rules = PredicateChain.of[Int, String, Any](
       all((fizzBuzz.mDivisibleByThreeP _), (fizzBuzz.mDivisibleByFiveP _)).named("fizzbuzz-rule") -> "fizzbuzz",
       (fizzBuzz.mDivisibleByThreeP _).named("fizz") -> "fizz",
       (fizzBuzz.mDivisibleByFiveP _).named("bazz") -> "buzz",
-      finish[Int] -> Result(n => n.toString())
+      finish[Int, Any]  -> Result(n => n.toString())
     )
 
-    val result = Await.result(engine.loggingAssess(rules)(1), 30.seconds).get
+    val result = Await.result(engine.loggingAssess(rules)(null)(1), 30.seconds).get
     assert(result == "1")
     verify(fizzBuzz).divisibleBy(1, 3)
     verify(fizzBuzz).divisibleBy(1, 5)
@@ -104,11 +104,11 @@ class CacheSpec extends FunSuite with ScalaFutures {
 
     val fizzBuzz = spy(new FizzBuzz())
 
-    val rules = PredicateChain.of[Int, String](
+    val rules = PredicateChain.of[Int, String, Any](
       all((fizzBuzz.mDivisibleByThreeP _), (fizzBuzz.mDivisibleByFiveP _)).named("fizzbuzz-rule") -> "fizzbuzz",
       (fizzBuzz.mDivisibleByThreeP _).named("fizz") -> "fizz",
       (fizzBuzz.mDivisibleByFiveP _).named("bazz") -> "buzz",
-      finish[Int] -> Result(n => n.toString())
+      finish[Int, Any]  -> Result(n => n.toString())
     )
 
     def time[R](block: => R): (R, Double) = {
@@ -118,11 +118,11 @@ class CacheSpec extends FunSuite with ScalaFutures {
       (result, (end - start) / 1e9)
     }
 
-    val (result, secs) = time(Await.result(engine.loggingAssess(rules)(1), 30.seconds).get)
+    val (result, secs) = time(Await.result(engine.loggingAssess(rules)(null)(1), 30.seconds).get)
     assert(result == "1")
     assert(secs > 1)
 
-    val (result2, secs2) = time(Await.result(engine.loggingAssess(rules)(1), 30.seconds).get)
+    val (result2, secs2) = time(Await.result(engine.loggingAssess(rules)(null)(1), 30.seconds).get)
     assert(result2 == "1")
     assert(secs2 < 1)
   }
@@ -131,11 +131,11 @@ class CacheSpec extends FunSuite with ScalaFutures {
     class MemoizedFizzBuzz() {
       val fizzBuzz = spy(new FizzBuzz())
 
-      val rules = PredicateChain.of[Int, String](
+      val rules = PredicateChain.of[Int, String, Any](
         all((fizzBuzz.mDivisibleByThreeP _), (fizzBuzz.mDivisibleByFiveP _)).named("fizzbuzz-rule") -> "fizzbuzz",
         (fizzBuzz.mDivisibleByThreeP _).named("fizz") -> "fizz",
         (fizzBuzz.mDivisibleByFiveP _).named("bazz") -> "buzz",
-        finish[Int] -> Result(n => n.toString())
+        finish[Int, Any]  -> Result(n => n.toString())
       )
 
       def time[R](block: => R): (R, Double) = {
@@ -145,15 +145,15 @@ class CacheSpec extends FunSuite with ScalaFutures {
         (result, (end - start) / 1e9)
       }
 
-      val (result, secs) = time(Await.result(engine.loggingAssess(rules)(1), 30.seconds).get)
+      val (result, secs) = time(Await.result(engine.loggingAssess(rules)(null)(1), 30.seconds).get)
       assert(result == "1")
       assert(secs > 1)
 
-      val (result2, secs2) = time(Await.result(engine.loggingAssess(rules)(2), 30.seconds).get)
+      val (result2, secs2) = time(Await.result(engine.loggingAssess(rules)(null)(2), 30.seconds).get)
       assert(result2 == "2")
       assert(secs2 > 1)
 
-      val (result3, secs3) = time(Await.result(engine.loggingAssess(rules)(1), 30.seconds).get)
+      val (result3, secs3) = time(Await.result(engine.loggingAssess(rules)(null)(1), 30.seconds).get)
       assert(result3 == "1")
       assert(secs3 < 1)
     }
@@ -166,17 +166,41 @@ class CacheSpec extends FunSuite with ScalaFutures {
     val fakeLogger = Mockito.spy(classOf[Logger])
     val engine = new RulesEngine(fakeLogger)
     val fizzBuzz = spy(new FizzBuzz())
-    val rules = PredicateChain.of[Int, String](
-      all((fizzBuzz.mDivisibleByThree _), (fizzBuzz.mDivisibleByFive _)).named("fizzbuzz-rule") -> "fizzbuzz",
-      (fizzBuzz.mDivisibleByThree _).named("fizz") -> "fizz",
-      (fizzBuzz.mDivisibleByFive _).named("bazz") -> "buzz",
-      finish[Int] -> Result(n => n.toString())
+    val world = new FizzBazzEnvirionment {
+      override val fizzbazz: FizzBuzz = fizzBuzz
+    }
+    val rules = PredicateChain.of[Int, String, FizzBazzEnvirionment](
+      all(FizzRule, BazzRule).named("fizzbuzz-rule") -> "fizzbuzz",
+      FizzRule.named("fizz") -> "fizz",
+      BazzRule.named("bazz") -> "buzz",
+      finish[Int, FizzBazzEnvirionment]  -> Result(n => n.toString())
     )
-    val result = Await.result(engine.loggingAssess(rules)(15), 5.seconds).get
+    val result = Await.result(engine.envirionmentalAssess(rules)(world)(15), 5.seconds).get
     assert(result == "fizzbuzz")
     verify(fizzBuzz).divisibleByThree(15)
     verify(fizzBuzz).divisibleByFive(15)
     verify(fakeLogger).info("Evaluting predicate fizzbuzz-rule")
     verify(fakeLogger).info("Predicate fizzbuzz-rule has value true")
+  }
+
+
+  test("Use two envirionemts in chain") {
+    import Predicate._
+    val fakeLogger = Mockito.spy(classOf[Logger])
+    val engine = new RulesEngine(fakeLogger)
+    val fizzBuzz = spy(new FizzBuzz())
+    val prime = new Prime()
+    val world = new FizzBazzEnvirionment with PrimeEnvironment {
+      override val fizzbazz: FizzBuzz = fizzBuzz
+
+      override val prime: Prime = prime
+    }
+    val rules = PredicateChain.of[Int, String, FizzBazzEnvirionment with PrimeEnvironment](
+      all(FizzRule, BazzRule).named("fizzbuzz-rule") -> "fizzbuzz",
+      FizzRule.named("fizz") -> "fizz",
+      BazzRule.named("bazz") -> "buzz",
+      PrimeRule.named("prime") -> "prime"
+      finish[Int, FizzBazzEnvirionment with PrimeEnvironment]  -> Result(n => n.toString())
+    )
   }
 }

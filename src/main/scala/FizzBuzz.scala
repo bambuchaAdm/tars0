@@ -30,3 +30,22 @@ class FizzBuzz {
   @memoize(maxSize = 2000, expiresAfter = 100 second)
   def mDivisibleByFiveP(n: Int): Future[Boolean] = divisibleBy(n, 5)
 }
+
+trait FizzBazzEnvirionment {
+  def fizzbazz: FizzBuzz
+}
+
+object FizzRule extends Predicate[Int, FizzBazzEnvirionment] {
+  override def function: PredicateFunction = environment => subject => {
+    environment.fizzbazz.mDivisibleByThree(subject)
+  }
+  override def named(name: String): Predicate[Int, FizzBazzEnvirionment] with Name = NamedPredicate(function, name)
+}
+
+object BazzRule extends Predicate[Int, FizzBazzEnvirionment] {
+  override def function: PredicateFunction = environment => subject => {
+    environment.fizzbazz.divisibleByFive(subject)
+  }
+
+  override def named(name: String): Predicate[Int, FizzBazzEnvirionment] with Name = NamedPredicate(function, name)
+}
